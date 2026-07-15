@@ -270,7 +270,7 @@ function loop(ts) {
     }
   }
   draw();
-  animId = requestAnimationFrame(loop);
+  if (!gameOver && !paused) animId = requestAnimationFrame(loop);
 }
 
 function init() {
