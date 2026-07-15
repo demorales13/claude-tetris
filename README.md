@@ -40,6 +40,7 @@ Es una versión jugable del Tetris clásico con todas las mecánicas que esperar
 - **Pieza fantasma** (_ghost piece_): muestra dónde aterrizará la pieza actual.
 - **Vista previa** de la siguiente pieza.
 - **Sistema de puntuación** clásico de Tetris (100 / 300 / 500 / 800 multiplicado por nivel).
+- **Modo combo y multiplicadores**: encadenar líneas en turnos consecutivos multiplica la puntuación (x2, x3, x4...), con bonus adicionales por **T-spin**, **Back-to-Back Tetris/T-spin** y **Perfect Clear**, acompañados de efectos visuales (texto flotante + flash del tablero) y sonidos sintetizados.
 - **Niveles** que aumentan cada 10 líneas y aceleran la caída.
 - **Pausa** y **Game Over** con opción de reinicio.
 
@@ -117,6 +118,11 @@ Contiene toda la lógica del juego. A grandes rasgos:
 - **Puntuación**: usa la tabla clásica `[0, 100, 300, 500, 800]` multiplicada por el nivel actual; el hard drop suma 2 puntos por celda recorrida y el soft drop 1 punto por fila.
 - **Nivel y velocidad**: el nivel sube cada 10 líneas; la velocidad de caída se calcula como `max(100, 1000 − (level − 1) × 90)` milisegundos.
 - **Ghost piece** (`ghostY`): proyecta la posición final de la pieza actual hacia abajo y la dibuja con `globalAlpha = 0.2`.
+- **Combo** (`combo`): cada bloqueo que limpia líneas incrementa el contador; uno que no limpia lo reinicia a 0. La puntuación de esa limpieza se multiplica por el combo actual (x2, x3, x4...), mostrado en el panel `COMBO` cuando es mayor a 1.
+- **T-spin** (`detectTSpin`): aplica la regla de las 3 esquinas — si la última acción fue una rotación de una pieza T y al menos 3 de las 4 esquinas de su caja 3×3 están ocupadas (por bloques o por el borde del tablero), se otorga un bonus (`TSPIN_SCORES`) sumado a la puntuación base de líneas.
+- **Back-to-Back** (`b2bActive`): un Tetris o T-spin consecutivo a otro Tetris/T-spin (sin una limpieza "normal" de por medio) añade un 50% extra sobre la puntuación base de esa limpieza.
+- **Perfect Clear** (`PERFECT_CLEAR_SCORES`): si tras limpiar líneas el tablero queda completamente vacío, se otorga un bonus grande según el número de líneas limpiadas.
+- **Efectos** (`queueEffect` / `drawEffects` / `flashBoard` / `playSound`): cada evento especial muestra un texto flotante con fundido sobre el tablero, un flash de brillo en el canvas y un sonido sintetizado con la Web Audio API (sin archivos de audio externos).
 
 ### Flujo del juego
 
@@ -175,6 +181,8 @@ Algunos parámetros fáciles de tunear en `game.js`:
 | `BLOCK`        | Tamaño en píxeles de cada celda          | `30`                  |
 | `COLORS`       | Paleta de colores por tipo de pieza      | 7 colores             |
 | `LINE_SCORES`  | Puntos por 1, 2, 3 o 4 líneas eliminadas | `[0,100,300,500,800]` |
+| `TSPIN_SCORES` | Bonus por T-spin con 0, 1, 2 o 3 líneas  | `[100,200,400,600]`   |
+| `PERFECT_CLEAR_SCORES` | Bonus por Perfect Clear según líneas eliminadas | `[0,800,1200,1800,2000]` |
 | `dropInterval` | Velocidad inicial de caída en ms         | `1000`                |
 
 > Si cambias `COLS`, `ROWS` o `BLOCK`, recuerda ajustar también `width` y `height` del `<canvas id="board">` en `index.html` para que coincida (`COLS × BLOCK` × `ROWS × BLOCK`).

@@ -140,6 +140,20 @@ body {
   border-radius: 4px;
 }
 
+#combo {
+  color: #ffd54f;
+}
+
+@keyframes board-flash {
+  0% { filter: brightness(1); }
+  35% { filter: brightness(1.7); }
+  100% { filter: brightness(1); }
+}
+
+#board.flash {
+  animation: board-flash 0.35s ease-out;
+}
+
 /* ---- Controles ---- */
 .controls ul {
   list-style: none;
