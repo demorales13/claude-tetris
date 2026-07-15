@@ -1,0 +1,107 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+concurrency:
+  group: claude-issue-triage-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Ensure labels exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Type labels (bug, enhancement, documentation, question already exist by default,
+          # --force keeps this idempotent if they don't).
+          gh label create "bug" --color "d73a4a" --description "Something isn't working" --force
+          gh label create "enhancement" --color "a2eeef" --description "New feature or request" --force
+          gh label create "documentation" --color "0075ca" --description "Improvements or additions to documentation" --force
+          gh label create "question" --color "d876e3" --description "Further information is requested" --force
+
+          # Area labels
+          gh label create "area:gameplay" --color "1d76db" --description "Core game rules, piece movement, collision" --force
+          gh label create "area:rendering" --color "1d76db" --description "Canvas drawing, visuals" --force
+          gh label create "area:controls" --color "1d76db" --description "Keyboard input handling" --force
+          gh label create "area:scoring" --color "1d76db" --description "Scoring and leveling" --force
+          gh label create "area:ui" --color "1d76db" --description "HTML/CSS, layout, UI elements" --force
+
+          # Status labels (triage pipeline hand-off)
+          gh label create "needs-diagnosis" --color "fbca04" --description "Issue awaiting automated diagnosis" --force
+          gh label create "diagnosed" --color "0e8a16" --description "Automated diagnosis posted; ready for implementation" --force
+
+      - name: Run Claude issue triage
+        id: claude-triage
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          additional_permissions: |
+            actions: read
+
+          claude_args: |
+            --allowed-tools "Read,Grep,Glob,Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label list:*)"
+
+          prompt: |
+            Eres un asistente de triage para el repositorio de un juego de Tetris en JavaScript
+            vanilla (ver CLAUDE.md para la arquitectura: board, PIECES, collide, tryRotate, loop,
+            clearLines, scoring, ghostY, etc.).
+
+            Se acaba de crear o editar el issue #${{ github.event.issue.number }} en
+            ${{ github.repository }}. Tu tarea:
+
+            1. Lee el issue con `gh issue view ${{ github.event.issue.number }} --json title,body,labels,comments`.
+            2. Explora el código relevante (game.js, index.html, style.css, README.md, CLAUDE.md)
+               para entender el contexto real del problema o petición descrita en el issue.
+            3. Asigna labels apropiados con
+               `gh issue edit ${{ github.event.issue.number }} --add-label "<label>"`.
+               Usa SOLO labels de esta lista, eligiendo los que apliquen:
+               - Tipo: bug, enhancement, documentation, question
+               - Área: area:gameplay, area:rendering, area:controls, area:scoring, area:ui
+               No elimines labels existentes que haya puesto el usuario (salvo el paso 5 de abajo).
+            4. Publica un comentario de diagnóstico con
+               `gh issue comment ${{ github.event.issue.number }} --body-file <archivo>` (usa un
+               archivo temporal para evitar problemas de escapado). El comentario debe:
+               - Empezar EXACTAMENTE con la línea `<!-- claude-diagnosis -->` (marcador oculto).
+               - Antes de comentar, revisa con
+                 `gh issue view ${{ github.event.issue.number }} --json comments` si ya existe un
+                 comentario tuyo anterior que empiece con ese marcador. Si el issue fue editado y ya
+                 hay un diagnóstico previo, este nuevo comentario reemplaza al anterior en contenido
+                 (deja claro en el texto que es una actualización), pero no necesitas borrar el
+                 comentario viejo — simplemente publica el diagnóstico actualizado.
+               - Usar exactamente esta estructura en español:
+
+                 ## Diagnóstico automático
+
+                 **Resumen del problema:** <1-3 frases>
+
+                 **Archivos y funciones afectadas:**
+                 - `archivo.js:línea` — descripción breve
+
+                 **Causa raíz probable:** <explicación técnica>
+
+                 **Enfoque propuesto para la solución:**
+                 1. <paso accionable>
+                 2. <paso accionable>
+
+                 **Confianza:** alta | media | baja
+
+            5. Una vez publicado el diagnóstico, actualiza el estado:
+               `gh issue edit ${{ github.event.issue.number }} --add-label "diagnosed" --remove-label "needs-diagnosis"`
+               (si `needs-diagnosis` no está presente, ignora el error de --remove-label).
+
+            No modifiques el cuerpo del issue ni el código del repositorio — solo labels y
+            comentarios.
