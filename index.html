@@ -52,11 +52,37 @@
       </aside>
     </div>
 
+    <div id="start-screen" class="overlay">
+      <div class="overlay-box start-box">
+        <p class="overlay-subtitle">TOP 5 PUNTUACIONES</p>
+        <div id="start-highscores" class="highscores"></div>
+        <p id="start-records" class="records-line"></p>
+        <div class="start-actions">
+          <button id="start-btn">Jugar</button>
+          <button id="reset-scores-btn-start" class="secondary-btn">Resetear récords</button>
+        </div>
+      </div>
+    </div>
+
     <div id="overlay" class="overlay hidden">
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
-        <button id="restart-btn">Reiniciar</button>
+
+        <div id="overlay-name-form" class="name-form hidden">
+          <p class="highlight-msg">¡Nueva puntuación en el Top 5! Ingresa tu nombre:</p>
+          <input id="player-name-input" type="text" maxlength="12" placeholder="Nombre" autocomplete="off" />
+          <button id="save-score-btn">Guardar</button>
+        </div>
+
+        <p class="overlay-subtitle">TOP 5 PUNTUACIONES</p>
+        <div id="overlay-highscores" class="highscores"></div>
+        <p id="overlay-records" class="records-line"></p>
+
+        <div class="overlay-actions">
+          <button id="restart-btn">Reiniciar</button>
+          <button id="reset-scores-btn-overlay" class="secondary-btn">Resetear récords</button>
+        </div>
       </div>
     </div>
   </div>
