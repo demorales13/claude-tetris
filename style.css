@@ -34,6 +34,63 @@
   --overlay-title: #c0392b;
 }
 
+/* ---- Skins visuales ---- */
+/* Neon siempre usa fondo negro, sin importar el tema claro/oscuro. */
+[data-skin="neon"] {
+  --bg: #000000;
+  --board-bg: #000000;
+  --board-border: #00fff9;
+  --board-shadow: rgba(0, 255, 249, 0.35);
+  --grid-line: #002b2a;
+  --accent: #00fff9;
+  --label-color: #00c8c2;
+  --kbd-bg: #001a19;
+  --kbd-border: #00fff9;
+  --kbd-text: #00fff9;
+  --overlay-bg: rgba(0, 0, 0, 0.85);
+  --overlay-title: #ff2d8a;
+}
+
+/* Pastel respeta el tema activo: una variante clara y otra oscura, ambas en tonos suaves. */
+[data-theme="light"][data-skin="pastel"] {
+  --bg: #fbeee6;
+  --board-bg: #fdf6f0;
+  --board-border: #f0d9e5;
+  --board-shadow: rgba(232, 169, 195, 0.3);
+  --grid-line: #f3e2ea;
+  --accent: #e8a9c3;
+  --accent-contrast: #ffffff;
+  --label-color: #b98aa0;
+  --control-text: #b98aa0;
+  --kbd-bg: #f7e6ee;
+  --kbd-border: #f0d9e5;
+  --kbd-text: #b98aa0;
+  --overlay-bg: rgba(251, 238, 230, 0.85);
+  --overlay-title: #d97a9c;
+}
+
+[data-theme="dark"][data-skin="pastel"] {
+  --bg: #2a2230;
+  --board-bg: #362b3d;
+  --board-border: #4d3d55;
+  --board-shadow: rgba(217, 154, 199, 0.25);
+  --grid-line: #3c3044;
+  --accent: #e8a9c3;
+  --accent-contrast: #2a2230;
+  --label-color: #c99cb5;
+  --control-text: #b090a8;
+  --kbd-bg: #3c3044;
+  --kbd-border: #4d3d55;
+  --kbd-text: #d7b8c9;
+  --overlay-bg: rgba(42, 34, 48, 0.85);
+  --overlay-title: #f0a8c0;
+}
+
+[data-skin="pixel"] {
+  --accent: #ffd54f;
+  --overlay-title: #ffd54f;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -70,10 +127,17 @@ body {
   font-weight: 800;
   letter-spacing: 8px;
   color: var(--accent);
-  text-shadow: 0 0 20px rgba(122, 162, 247, 0.5);
+  text-shadow: 0 0 20px var(--accent);
+  transition: color 0.2s, text-shadow 0.2s;
 }
 
-#theme-toggle {
+[data-skin="pixel"] .game-title {
+  font-family: 'Courier New', Courier, monospace;
+  text-shadow: none;
+}
+
+#theme-toggle,
+#skin-select {
   background: transparent;
   border: 1px solid var(--board-border);
   color: var(--text);
@@ -85,7 +149,13 @@ body {
   transition: background 0.15s, border-color 0.2s;
 }
 
-#theme-toggle:hover {
+#skin-select {
+  font-size: 13px;
+  font-family: inherit;
+}
+
+#theme-toggle:hover,
+#skin-select:hover {
   background: var(--kbd-bg);
 }
 

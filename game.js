@@ -4,16 +4,60 @@ const COLS = 10;
 const ROWS = 20;
 const BLOCK = 30;
 
-const COLORS = [
-  null,
-  '#4dd0e1', // I - cyan
-  '#ffd54f', // O - yellow
-  '#ba68c8', // T - purple
-  '#81c784', // S - green
-  '#e57373', // Z - red
-  '#90caf9', // J - pale blue
-  '#ffb74d', // L - orange
-];
+const SKINS = {
+  retro: {
+    label: 'Retro',
+    colors: [
+      null,
+      '#4dd0e1', // I - cyan
+      '#ffd54f', // O - yellow
+      '#ba68c8', // T - purple
+      '#81c784', // S - green
+      '#e57373', // Z - red
+      '#90caf9', // J - pale blue
+      '#ffb74d', // L - orange
+    ],
+  },
+  neon: {
+    label: 'Neon',
+    colors: [
+      null,
+      '#00fff9', // I
+      '#faff00', // O
+      '#ff00e6', // T
+      '#00ff85', // S
+      '#ff2d55', // Z
+      '#00aaff', // J
+      '#ff9500', // L
+    ],
+  },
+  pastel: {
+    label: 'Pastel',
+    colors: [
+      null,
+      '#a7d8de', // I
+      '#fff2b2', // O
+      '#d9b8e0', // T
+      '#bfe3c0', // S
+      '#f4b6b6', // Z
+      '#b8d3f4', // J
+      '#f8d3a8', // L
+    ],
+  },
+  pixel: {
+    label: 'Pixel Art',
+    colors: [
+      null,
+      '#4dd0e1',
+      '#ffd54f',
+      '#ba68c8',
+      '#81c784',
+      '#e57373',
+      '#90caf9',
+      '#ffb74d',
+    ],
+  },
+};
 
 const PIECES = [
   null,
@@ -52,12 +96,15 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeToggleBtn = document.getElementById('theme-toggle');
+const skinSelect = document.getElementById('skin-select');
 
 const THEME_STORAGE_KEY = 'tetris-theme';
+const SKIN_STORAGE_KEY = 'tetris-skin';
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 let combo, b2bActive, lastMoveWasRotation, floatingTexts;
 let audioCtx = null;
+let currentSkin = 'retro';
 
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
@@ -72,6 +119,18 @@ function toggleTheme() {
 
 themeToggleBtn.addEventListener('click', toggleTheme);
 applyTheme(localStorage.getItem(THEME_STORAGE_KEY) === 'light' ? 'light' : 'dark');
+
+function applySkin(skin) {
+  if (!SKINS[skin]) skin = 'retro';
+  currentSkin = skin;
+  document.documentElement.setAttribute('data-skin', skin);
+  skinSelect.value = skin;
+  localStorage.setItem(SKIN_STORAGE_KEY, skin);
+  if (next) drawNext();
+}
+
+skinSelect.addEventListener('change', e => applySkin(e.target.value));
+applySkin(localStorage.getItem(SKIN_STORAGE_KEY) || 'retro');
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -350,16 +409,92 @@ function playSound(kind) {
   }
 }
 
-function drawBlock(context, x, y, colorIndex, size, alpha) {
-  if (!colorIndex) return;
-  const color = COLORS[colorIndex];
-  context.globalAlpha = alpha ?? 1;
+function shadeColor(hex, percent) {
+  const num = parseInt(hex.slice(1), 16);
+  let r = (num >> 16) + percent;
+  let g = ((num >> 8) & 0x00ff) + percent;
+  let b = (num & 0x0000ff) + percent;
+  r = Math.min(255, Math.max(0, r));
+  g = Math.min(255, Math.max(0, g));
+  b = Math.min(255, Math.max(0, b));
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
+function drawRoundedRectPath(context, x, y, w, h, r) {
+  context.beginPath();
+  context.moveTo(x + r, y);
+  context.arcTo(x + w, y, x + w, y + h, r);
+  context.arcTo(x + w, y + h, x, y + h, r);
+  context.arcTo(x, y + h, x, y, r);
+  context.arcTo(x, y, x + w, y, r);
+  context.closePath();
+}
+
+// Retro: bloques cuadrados planos con un highlight superior (estilo clasico).
+function drawBlockRetro(context, x, y, color, size) {
   context.fillStyle = color;
   context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
   context.fillStyle = 'rgba(255,255,255,0.12)';
   context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
-  context.globalAlpha = 1;
+}
+
+// Neon: fondo negro con borde y nucleo brillante via shadowBlur.
+function drawBlockNeon(context, x, y, color, size) {
+  const px = x * size, py = y * size;
+  context.fillStyle = '#000000';
+  context.fillRect(px + 1, py + 1, size - 2, size - 2);
+  context.shadowColor = color;
+  context.shadowBlur = 14;
+  context.strokeStyle = color;
+  context.lineWidth = 2;
+  context.strokeRect(px + 3, py + 3, size - 6, size - 6);
+  context.shadowBlur = 8;
+  context.fillStyle = color;
+  context.fillRect(px + 5, py + 5, size - 10, size - 10);
+}
+
+// Pastel: colores suaves con esquinas redondeadas simuladas y brillo superior.
+function drawBlockPastel(context, x, y, color, size) {
+  const px = x * size + 2, py = y * size + 2, s = size - 4;
+  drawRoundedRectPath(context, px, py, s, s, 6);
+  context.fillStyle = color;
+  context.fill();
+  drawRoundedRectPath(context, px, py, s, Math.max(s * 0.35, 4), 6);
+  context.fillStyle = 'rgba(255,255,255,0.4)';
+  context.fill();
+}
+
+// Pixel art: bloque con borde oscuro y sombreado diagonal simulando textura.
+function drawBlockPixel(context, x, y, color, size) {
+  const px = x * size, py = y * size;
+  context.fillStyle = shadeColor(color, -60);
+  context.fillRect(px + 1, py + 1, size - 2, size - 2);
+  const inset = 4;
+  const inner = size - inset * 2;
+  context.fillStyle = color;
+  context.fillRect(px + inset, py + inset, inner, inner);
+  const half = Math.ceil(inner / 2);
+  context.fillStyle = shadeColor(color, 35);
+  context.fillRect(px + inset, py + inset, half, half);
+  context.fillStyle = shadeColor(color, -35);
+  context.fillRect(px + inset + inner - half, py + inset + inner - half, half, half);
+}
+
+const SKIN_DRAWERS = {
+  retro: drawBlockRetro,
+  neon: drawBlockNeon,
+  pastel: drawBlockPastel,
+  pixel: drawBlockPixel,
+};
+
+function drawBlock(context, x, y, colorIndex, size, alpha) {
+  if (!colorIndex) return;
+  const color = (SKINS[currentSkin] || SKINS.retro).colors[colorIndex];
+  const drawer = SKIN_DRAWERS[currentSkin] || drawBlockRetro;
+  context.save();
+  context.globalAlpha = alpha ?? 1;
+  drawer(context, x, y, color, size);
+  context.restore();
 }
 
 function drawGrid() {
